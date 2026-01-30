@@ -102,9 +102,9 @@ class UserInfoView(APIView):
 
     def get(self, request):
         user = (
-            User.objects.select_related("role")
-            .only("id", "phone_number", "first_name", "last_name",
-                "status", "is_phone_verified", "role__name")
-            .get(id=request.user.id)
-        )
+            User.objects.select_related("specialist_request").only(
+                "id", "phone_number", "first_name", "last_name",
+                "status", "is_phone_verified", "role",
+                "specialist_request__status", "specialist_request__created_at",)
+            .get(id=request.user.id))
         return Response(UserInfoSerializer(user).data)
