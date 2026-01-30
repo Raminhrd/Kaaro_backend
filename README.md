@@ -1,8 +1,8 @@
-# 🚗 AutoCare
+# 🚀 Kaaro
 
-A Car Service Booking & Management System built with Django REST Framework.
+An On-Demand Service Marketplace built with Django REST Framework.
 
-AutoCare is a backend-focused project where users can register their cars, request service appointments, and authenticate via OTP.  
+Kaaro is a backend-focused project where users can request home services (cleaning, repairs, moving, etc.) and specialists can accept and complete jobs.  
 The system uses Redis for OTP caching and Celery for background tasks like sending SMS notifications.
 
 ---
@@ -11,28 +11,36 @@ The system uses Redis for OTP caching and Celery for background tasks like sendi
 
 ✅ OTP Authentication (request OTP + login)  
 ✅ JWT authentication stored in **cookies** (`accessToken`, `refreshToken`)  
-✅ Car management (users can register and manage cars)  
-✅ Booking appointments for service centers  
+✅ User roles: **Customer / Specialist**  
+✅ Specialist request system (users can request to become specialists, admin approves)  
+✅ Job/Task request system (customers create requests)  
+✅ Specialists can accept nearby requests and complete jobs  
 ✅ Redis caching for OTP codes (expires automatically)  
 ✅ Celery background tasks (send OTP SMS asynchronously)  
-✅ API Documentation using Swagger
+✅ API Documentation using Swagger  
+
+---
 
 ## 🛠️ Tech Stack
 
-* **Python 3.11+**
-* **Django REST Framework (DRF)**
-* **PostgreSQL**
+- **Python 3.11+**
+- **Django REST Framework (DRF)**
+- **PostgreSQL**
+- **Redis**
+- **Celery**
 
+---
 
 ## 🚀 How to run the project
 
-⚙️ Create a `.env` file:
+### ⚙️ Create a `.env` file
 ```env
 DEBUG=True
 SECRET_KEY=your-secret-key
 ALLOWED_HOSTS=127.0.0.1,localhost
+
 REDIS_URL=redis://127.0.0.1:6379/1
-CELERY_BROKER_URL=redis://127.0.0.1:6379/0 
+CELERY_BROKER_URL=redis://127.0.0.1:6379/0
 CELERY_RESULT_BACKEND=redis://127.0.0.1:6379/0
 
 FARAZ_SMS_API_KEY=key
@@ -60,7 +68,7 @@ python manage.py migrate
 python manage.py runserver
 
 # Start celery worker
-celery -A carservices worker --loglevel=INFO --pool=solo
+celery -A kaaro worker --loglevel=INFO --pool=solo
 ```
 
 ## 🧪 API Documentation
