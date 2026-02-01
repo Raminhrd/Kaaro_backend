@@ -6,12 +6,15 @@ from rest_framework_simplejwt.views import TokenObtainPairView
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.exceptions import InvalidToken
 from django.contrib.auth import get_user_model
+from django.utils import timezone
 from django.core.cache import cache
 
-from users.serializers import SignUpSerializer, OTPRequestSerializer, OTPLoginSerializer, UserInfoSerializer
+from users.serializers import SignUpSerializer, OTPRequestSerializer, OTPLoginSerializer, UserInfoSerializer, SpecialistRequestAdminDecisionSerializer, SpecialistRequestSerializer, SpecialistRequestCreateSerializer
 from users.utils import set_tokens_on_cookie, generate_otp
 from users.tasks import send_otp_sms
 from users.defaults import OTP_EXPIRY_SECONDS
+from users.models import SpecialistRequest
+from users.permission import IsAdminUser
 
 User = get_user_model()
 
@@ -108,3 +111,56 @@ class UserInfoView(APIView):
                 "specialist_request__status", "specialist_request__created_at",)
             .get(id=request.user.id))
         return Response(UserInfoSerializer(user).data)
+    
+
+class SpecialistRequestMeView(APIView):
+    # Customer/Specialist: create request (or update note) + view request status
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        sr = SpecialistRequest.objects.filter(user=request.user).first()
+        if not sr:
+            return Response({"detail": "No specialist request found."}, status=status.HTTP_404_NOT_FOUND)
+        return Response(SpecialistRequestSerializer(sr).data)
+
+    def post(self, request):
+        serializer = SpecialistRequestCreateSerializer(data=request.data, context={"request": request})
+        serializer.is_valid(raise_exception=True)
+        sr = serializer.save()
+        return Response(SpecialistRequestSerializer(sr).data, status=status.HTTP_201_CREATED)
+
+
+class SpecialistRequestAdminDecisionView(APIView):
+    """
+    Admin: approve/reject specialist request
+    """
+    permission_classes = [IsAuthenticated, IsAdminUser]
+
+    def post(self, request, pk: int):
+        sr = SpecialistRequest.objects.select_related("user").get(pk=pk)
+
+        serializer = SpecialistRequestAdminDecisionSerializer(
+            data=request.data,
+            context={"specialist_request": sr},
+        )
+        serializer.is_valid(raise_exception=True)
+
+        decision = serializer.validated_data["decision"]
+
+        if decision == "approve":
+            sr.status = SpecialistRequest.Status.APPROVED
+            sr.reviewed_at = timezone.now()
+            sr.save(update_fields=["status", "reviewed_at"])
+
+            # نقش کاربر رو specialist کن
+            user = sr.user
+            user.role = User.RoleChoices.SPECIALIST
+            user.save(update_fields=["role"])
+
+            return Response({"detail": "Approved."}, status=status.HTTP_200_OK)
+
+        # reject
+        sr.status = SpecialistRequest.Status.REJECTED
+        sr.reviewed_at = timezone.now()
+        sr.save(update_fields=["status", "reviewed_at"])
+        return Response({"detail": "Rejected."}, status=status.HTTP_200_OK)

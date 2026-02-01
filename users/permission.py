@@ -14,3 +14,9 @@ class IsApprovedSpecialist(BasePermission):
 
         sr = getattr(user, "specialist_request", None)
         return sr is not None and sr.status == sr.Status.APPROVED
+
+
+class IsAdminUser(BasePermission):
+    def has_permission(self, request, view):
+        return bool(request.user and request.user.is_authenticated and request.user.is_staff)
+
