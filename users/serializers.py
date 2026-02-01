@@ -2,6 +2,7 @@ from django.contrib.auth import authenticate, get_user_model
 from rest_framework import serializers
 from rest_framework_simplejwt.tokens import RefreshToken
 from .utils import normalize_phone_number
+from users.models import SpecialistRequest
 
 User = get_user_model()
 
@@ -52,3 +53,46 @@ class UserInfoSerializer(serializers.ModelSerializer):
             "role",
             "is_phone_verified",
         )
+
+
+class SpecialistRequestCreateSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = SpecialistRequest
+        fields = ("note",)
+
+    def create(self, validated_data):
+        user = self.context["request"].user
+
+        sr, created = SpecialistRequest.objects.get_or_create(user=user)
+        if "note" in validated_data:
+            sr.note = validated_data["note"]
+            sr.save(update_fields=["note"])
+        return sr
+
+
+class SpecialistRequestSerializer(serializers.ModelSerializer):
+    status_display = serializers.CharField(source="get_status_display", read_only=True)
+
+    class Meta:
+        model = SpecialistRequest
+        fields = (
+            "id",
+            "status",
+            "status_display",
+            "note",
+            "created_at",
+            "reviewed_at",
+        )
+        read_only_fields = fields
+
+
+class SpecialistRequestAdminDecisionSerializer(serializers.Serializer):
+    # approve / reject
+    decision = serializers.ChoiceField(choices=("approve", "reject"))
+    admin_note = serializers.CharField(required=False, allow_blank=True, allow_null=True)
+
+    def validate(self, attrs):
+        request_obj: SpecialistRequest = self.context["specialist_request"]
+        if request_obj.status != SpecialistRequest.Status.PENDING:
+            raise serializers.ValidationError("This request is already reviewed.")
+        return attrs
