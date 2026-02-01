@@ -131,9 +131,8 @@ class SpecialistRequestMeView(APIView):
 
 
 class SpecialistRequestAdminDecisionView(APIView):
-    """
-    Admin: approve/reject specialist request
-    """
+
+    # Admin: approve/reject specialist request
     permission_classes = [IsAuthenticated, IsAdminUser]
 
     def post(self, request, pk: int):
@@ -152,7 +151,6 @@ class SpecialistRequestAdminDecisionView(APIView):
             sr.reviewed_at = timezone.now()
             sr.save(update_fields=["status", "reviewed_at"])
 
-            # نقش کاربر رو specialist کن
             user = sr.user
             user.role = User.RoleChoices.SPECIALIST
             user.save(update_fields=["role"])
